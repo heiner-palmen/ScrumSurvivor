@@ -4,6 +4,7 @@
 # Usage:  ./run_setup.sh
 #
 # What it does (in order, skipping steps that are already done):
+#   0.  Install pactl (pulseaudio-utils)
 #   1.  Verify Python 3.10+ is available
 #   1b. Install python3-dev headers (for building pip packages)
 #   2.  Create Python .venv and install pip packages
@@ -61,15 +62,15 @@ ask_yes_no() {
     fi
     echo ""
     echo -en "  ${WHITE}$question $hint ${NC}" >&2
-    read -r answer
-    if [[ -z "$answer" ]]; then
-        echo "$default"
+    read -r _ASK_ANSWER
+    if [[ -z "$_ASK_ANSWER" ]]; then
+        _ASK_RESULT="$default"
         return
     fi
-    if [[ "${answer,,}" == y* ]]; then
-        echo "true"
+    if [[ "${_ASK_ANSWER,,}" == y* ]]; then
+        _ASK_RESULT="true"
     else
-        echo "false"
+        _ASK_RESULT="false"
     fi
 }
 
@@ -122,6 +123,40 @@ pkg_install() {
         *)       write_err "No supported package manager found. Install '$pkg' manually." ;;
     esac
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 0 — Install pactl (pulseaudio-utils)
+# ─────────────────────────────────────────────────────────────────────────────
+
+write_step 0 "pactl (PulseAudio Utilities)"
+
+if command -v pactl &>/dev/null; then
+    write_ok "pactl is already available."
+else
+    write_info "Installing pactl ..."
+    case "$PKG_CMD" in
+        apt-get)       PACTL_PKG="pulseaudio-utils" ;;
+        dnf|yum)       PACTL_PKG="pulseaudio-utils" ;;
+        pacman)        PACTL_PKG="pulseaudio" ;;
+        zypper)        PACTL_PKG="pulseaudio-utils" ;;
+        apk)           PACTL_PKG="pulseaudio-utils" ;;
+        *)             PACTL_PKG="" ;;
+    esac
+
+    if [[ -n "$PACTL_PKG" ]]; then
+        if pkg_install "$PACTL_PKG"; then
+            if command -v pactl &>/dev/null; then
+                write_ok "pactl installed successfully."
+            else
+                write_warn "pactl still not found after installing $PACTL_PKG."
+            fi
+        else
+            write_warn "Failed to install $PACTL_PKG — pactl may not be available."
+        fi
+    else
+        write_warn "No supported package manager — install pactl manually."
+    fi
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 1 — Python version check
@@ -336,11 +371,9 @@ else
 
     if [[ "$PIPEWIRE_OK" == "true" ]]; then
         write_info "PipeWire detected. Creating a virtual sink..."
-        if command -v wpctl &>/dev/null; then
-            write_info "Run the following to create a virtual sink:"
-            write_info "  wpctl load-module null-sink sink_name=scrum_cable sink_description='ScrumSurvivor Virtual Cable'"
-            write_info "To make it persistent, add to ~/.config/pipewire/pipewire.conf.d/99-scrumsurvivor.conf"
-        fi
+        write_info "Run the following to create a virtual sink:"
+        write_info "  pactl load-module module-null-sink sink_name=scrum_cable sink_properties=device.description='ScrumSurvivor_Virtual_Cable'"
+        write_info "To make it persistent, add to ~/.config/pipewire/pipewire.conf.d/99-scrumsurvivor.conf"
     elif [[ "$PULSE_OK" == "true" ]]; then
         write_info "PulseAudio detected. Creating a null-sink..."
         write_info "Run the following to create a virtual cable:"
@@ -354,25 +387,25 @@ else
         write_info "  sudo dnf install pulseaudio  (Fedora)"
     fi
 
-    ANSWER=$(ask_yes_no "Create the virtual audio sink now?")
-    if [[ "$ANSWER" == "true" ]]; then
-        if [[ "$PIPEWIRE_OK" == "true" ]] && command -v wpctl &>/dev/null; then
-            wpctl load-module null-sink sink_name=scrum_cable sink_description='ScrumSurvivor Virtual Cable' 2>/dev/null
-            if [[ $? -eq 0 ]]; then
-                write_ok "PipeWire virtual sink created."
+    ask_yes_no "Create the virtual audio sink now?"
+    if [[ "$_ASK_RESULT" == "true" ]]; then
+        if command -v pactl &>/dev/null; then
+            pactl load-module module-null-sink \
+                sink_name=scrum_cable \
+                sink_properties=device.description='ScrumSurvivor_Virtual_Cable' 2>/dev/null || true
+            if pactl list sinks short 2>/dev/null | grep -qi "scrum_cable"; then
+                write_ok "Virtual audio sink created."
                 VIRT_AUDIO_OK=true
             else
-                write_warn "Failed to create PipeWire sink. Try with sudo or check PipeWire status."
+                write_warn "Failed to create virtual audio sink."
+                write_info "You may need to restart your audio server:"
+                write_info "  pulseaudio -k && pulseaudio --start   (PulseAudio)"
+                write_info "  systemctl --user restart pipewire pipewire-pulse   (PipeWire)"
             fi
-        elif command -v pactl &>/dev/null; then
-            pactl load-module module-null-sink sink_name=scrum_cable sink_properties=device.description='ScrumSurvivor_Virtual_Cable' 2>/dev/null
-            if [[ $? -eq 0 ]]; then
-                write_ok "PulseAudio null-sink created."
-                VIRT_AUDIO_OK=true
-            else
-                write_warn "Failed to create PulseAudio null-sink. You may need to restart PulseAudio."
-                write_info "Try: pulseaudio -k && pulseaudio --start"
-            fi
+        else
+            write_warn "pactl not found. Cannot create virtual sink automatically."
+            write_info "Create it manually:"
+            write_info "  pactl load-module module-null-sink sink_name=scrum_cable sink_properties=device.description='ScrumSurvivor_Virtual_Cable'"
         fi
     fi
 fi
@@ -394,8 +427,8 @@ else
     write_warn "v4l2loopback kernel module not detected."
     write_info "v4l2loopback is required for virtual camera output on Linux."
 
-    ANSWER=$(ask_yes_no "Install v4l2loopback now? (requires sudo)")
-    if [[ "$ANSWER" == "true" ]]; then
+    ask_yes_no "Install v4l2loopback now? (requires sudo)"
+    if [[ "$_ASK_RESULT" == "true" ]]; then
         case "$PKG_CMD" in
             apt-get)
                 pkg_install "linux-headers-$(uname -r)"
@@ -437,8 +470,8 @@ else
     write_info "  sudo pacman -S obs-studio             (Arch)"
     write_info "  Or download from https://obsproject.com/"
 
-    ANSWER=$(ask_yes_no "Open the OBS Studio download page in your browser?")
-    if [[ "$ANSWER" == "true" ]]; then
+    ask_yes_no "Open the OBS Studio download page in your browser?"
+    if [[ "$_ASK_RESULT" == "true" ]]; then
         if command -v xdg-open &>/dev/null; then
             xdg-open "https://obsproject.com/download" || write_warn "Failed to open browser."
         elif command -v open &>/dev/null; then
@@ -472,8 +505,8 @@ else
     write_warn "ffmpeg was NOT found."
     write_info "ffmpeg is required by the Illusion Verifier tool."
 
-    ANSWER=$(ask_yes_no "Install ffmpeg now? (requires sudo)")
-    if [[ "$ANSWER" == "true" ]]; then
+    ask_yes_no "Install ffmpeg now? (requires sudo)"
+    if [[ "$_ASK_RESULT" == "true" ]]; then
         case "$PKG_CMD" in
             apt-get) pkg_install "ffmpeg" ;;
             dnf|yum) pkg_install "ffmpeg" ;;
@@ -545,14 +578,23 @@ else
 
         mkdir -p "$MODELS_DIR"
 
-        ANSWER=$(ask_yes_no "Open the Wav2Lip (NOGAN) Google Drive download page in your browser?")
-        if [[ "$ANSWER" == "true" ]]; then
-            if command -v xdg-open &>/dev/null; then
-                xdg-open "https://drive.google.com/drive/folders/153HLrqlBNxzZcHi17PEvP09kkAfzRshM?usp=share_link" || write_warn "Failed to open browser."
-            elif command -v open &>/dev/null; then
-                open "https://drive.google.com/drive/folders/153HLrqlBNxzZcHi17PEvP09kkAfzRshM?usp=share_link" || write_warn "Failed to open browser."
-            else
-                write_warn "No browser launcher found. Open the link manually."
+        ask_yes_no "Open the Wav2Lip (NOGAN) Google Drive download page in your browser?"
+        if [[ "$_ASK_RESULT" == "true" ]]; then
+            URL="https://drive.google.com/drive/folders/153HLrqlBNxzZcHi17PEvP09kkAfzRshM"
+            BROWSER_OPENED=false
+
+            for OPENER in xdg-open gnome-open kde-open open; do
+                if command -v "$OPENER" &>/dev/null; then
+                    nohup "$OPENER" "$URL" </dev/null >/dev/null 2>&1 &
+                    BROWSER_OPENED=true
+                    write_ok "Opening browser..."
+                    break
+                fi
+            done
+
+            if [[ "$BROWSER_OPENED" != "true" ]]; then
+                write_warn "No browser launcher found. Please open the link manually:"
+                write_info "  $URL"
             fi
         fi
 
