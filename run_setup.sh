@@ -125,11 +125,12 @@ pkg_install() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 0 — Install pactl (pulseaudio-utils)
+# STEP 0 — Install pactl (pulseaudio-utils) + libportaudio2
 # ─────────────────────────────────────────────────────────────────────────────
 
-write_step 0 "pactl (PulseAudio Utilities)"
+write_step 0 "pactl (PulseAudio Utilities) + libportaudio2"
 
+# ── pactl ─────────────────────────────────────────────────────────────────────
 if command -v pactl &>/dev/null; then
     write_ok "pactl is already available."
 else
@@ -156,6 +157,43 @@ else
     else
         write_warn "No supported package manager — install pactl manually."
     fi
+fi
+
+# ── libportaudio2 ─────────────────────────────────────────────────────────────
+write_info "Checking for libportaudio2 ..."
+case "$PKG_CMD" in
+    apt-get)       PORTAUDIO_PKG="libportaudio2" ;;
+    dnf|yum)       PORTAUDIO_PKG="portaudio" ;;
+    pacman)        PORTAUDIO_PKG="portaudio" ;;
+    zypper)        PORTAUDIO_PKG="portaudio" ;;
+    apk)           PORTAUDIO_PKG="portaudio" ;;
+    *)             PORTAUDIO_PKG="" ;;
+esac
+
+if [[ -n "$PORTAUDIO_PKG" ]]; then
+    # Quick check: see if the package is already installed
+    PKG_INSTALLED=false
+    case "$PKG_CMD" in
+        apt-get)       dpkg -s "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+        dnf)           dnf list installed "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+        yum)           yum list installed "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+        pacman)        pacman -Q "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+        zypper)        zypper se -i "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+        apk)           apk list -I "$PORTAUDIO_PKG" &>/dev/null && PKG_INSTALLED=true ;;
+    esac
+
+    if [[ "$PKG_INSTALLED" == "true" ]]; then
+        write_ok "libportaudio2 ($PORTAUDIO_PKG) is already installed."
+    else
+        write_info "Installing libportaudio2 ($PORTAUDIO_PKG) ..."
+        if pkg_install "$PORTAUDIO_PKG"; then
+            write_ok "libportaudio2 installed successfully."
+        else
+            write_warn "Failed to install $PORTAUDIO_PKG — libportaudio2 may not be available."
+        fi
+    fi
+else
+    write_warn "No supported package manager — install libportaudio2 manually."
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
