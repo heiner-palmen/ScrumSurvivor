@@ -4,9 +4,25 @@ from __future__ import annotations
 
 import logging
 
+import cv2
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+def _resize_to_smaller(
+    frame: np.ndarray,
+    reference: np.ndarray,
+) -> np.ndarray:
+    """Return *frame* resized to *reference* shape if it is larger, else unchanged."""
+    if frame.shape == reference.shape:
+        return frame
+    # Pick the smaller resolution and resize the larger frame down to it.
+    target_h, target_w = reference.shape[:2]
+    frame_h, frame_w = frame.shape[:2]
+    if frame_h * frame_w > target_h * target_w:
+        return cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_AREA)
+    return cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
 
 
 class IdleCompositor:
@@ -64,6 +80,13 @@ class IdleCompositor:
     def _apply_transition(self, target_frame: np.ndarray) -> np.ndarray:
         if self._transition_from is None:
             return target_frame
+
+        # Ensure both frames share the same resolution before blending.
+        if self._transition_from.shape != target_frame.shape:
+            target_frame = _resize_to_smaller(target_frame, self._transition_from)
+            self._transition_from = _resize_to_smaller(
+                self._transition_from, target_frame
+            )
 
         alpha = self._smoothstep_alpha(self._transition_step, self._transition_frames)
         target_f32 = target_frame.astype(np.float32)
@@ -157,6 +180,10 @@ class IdleCompositor:
             and source_key != self._last_source_key
         ):
             self._start_transition(self._last_output)
+
+            # Resize *frame* to match the previous output so the transition
+            # can always blend regardless of resolution differences.
+            frame = _resize_to_smaller(frame, self._last_output)
 
         frame = self._apply_transition(frame)
         self._last_source_key = source_key
