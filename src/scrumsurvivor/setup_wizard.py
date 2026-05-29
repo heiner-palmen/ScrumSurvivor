@@ -278,9 +278,79 @@ def tune_speech_threshold(
     return threshold
 
 
-def _live_threshold_loop(mic: MicrophoneCapture, threshold: float) -> float:
-    import msvcrt
+# ── Cross-platform keyboard helpers ──────────────────────────────────────
 
+def _kbhit() -> bool:
+    """Non-blocking check for a pending keystroke."""
+    if sys.platform == "win32":
+        import msvcrt
+
+        return msvcrt.kbhit()
+    import select
+
+    dr, _, _ = select.select([sys.stdin], [], [], 0)
+    return dr != []
+
+
+def _getch() -> str:
+    """Read a single character (or escape sequence) from stdin."""
+    if sys.platform == "win32":
+        import msvcrt
+
+        return msvcrt.getwch()
+    import termios
+    import tty
+
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return ch
+
+
+def _read_key() -> str | None:
+    """Read a keypress, normalising arrow-key sequences across platforms.
+
+    Returns:
+        'enter' for Enter/Return,
+        'left' / 'right' for arrow keys,
+        or the raw character for anything else.
+    """
+    if not _kbhit():
+        return None
+
+    ch = _getch()
+
+    # Enter
+    if ch in ("\r", "\n"):
+        return "enter"
+
+    # Windows function-key prefix
+    if sys.platform == "win32":
+        if ch in ("\x00", "\xe0"):
+            next_ch = _getch()
+            if next_ch == "\x4d":
+                return "right"
+            if next_ch == "\x4b":
+                return "left"
+        return ch
+
+    # POSIX: ESC sequence for arrow keys  (\x1b [ A/B/C/D)
+    if ch == "\x1b":
+        second = _getch()
+        if second == "[":
+            third = _getch()
+            if third == "D":
+                return "left"
+            if third == "C":
+                return "right"
+    return ch
+
+
+def _live_threshold_loop(mic: MicrophoneCapture, threshold: float) -> float:
     _SCALE = 1.0  # bar always shows 0..1 range
     current_rms = 0.0
 
@@ -292,19 +362,16 @@ def _live_threshold_loop(mic: MicrophoneCapture, threshold: float) -> float:
         sys.stdout.write("\r" + _format_level_meter(current_rms, threshold, _SCALE).ljust(140))
         sys.stdout.flush()
 
-        if not msvcrt.kbhit():
+        key = _read_key()
+        if key is None:
             continue
-
-        key = msvcrt.getwch()
-        if key in ("\r", "\n"):
+        if key == "enter":
             break
-        if key in ("\x00", "\xe0"):
-            arrow = msvcrt.getwch()
-            step = _SCALE / _METER_WIDTH
-            if arrow == "\x4d":  # right — raise
-                threshold = min(_SCALE, threshold + step)
-            elif arrow == "\x4b":  # left — lower
-                threshold = max(_MIN_SPEECH_THRESHOLD, threshold - step)
+        step = _SCALE / _METER_WIDTH
+        if key == "right":
+            threshold = min(_SCALE, threshold + step)
+        elif key == "left":
+            threshold = max(_MIN_SPEECH_THRESHOLD, threshold - step)
 
     sys.stdout.write("\r" + _CLEAR_LINE + "\r")
     sys.stdout.flush()

@@ -8,7 +8,9 @@
 
 ScrumSurvivor replaces your live webcam feed with an AI-animated version of *you*. When you speak, [Wav2Lip](https://github.com/Rudrabha/Wav2Lip) lip-syncs your face to your voice in real time. When you are silent, the avatar breathes, blinks, sways its head, and plays pre-recorded idle clips — all layered procedurally so it looks alive. Your colleagues see you attentively present. You see freedom.
 
-**Platform:** Windows 10 / 11 · **Primary target:** Microsoft Teams · **GPU required** (NVIDIA CUDA)
+**Platform:** Windows 10 / 11, Linux · **Primary target:** Microsoft Teams · **GPU required** (NVIDIA CUDA)
+
+> **Scripts:** `.ps1` (PowerShell) scripts are for Windows. `.sh` (Bash) scripts are for Linux. Each script has a cross-platform equivalent with the same name prefix (e.g. `run.ps1` / `run.sh`).
 
 ---
 
@@ -20,7 +22,7 @@ ScrumSurvivor replaces your live webcam feed with an AI-animated version of *you
 4. [Assets You Must Provide](#assets-you-must-provide)
 5. [Full Setup: Step by Step](#full-setup-step-by-step)
 6. [Running ScrumSurvivor](#running-scrumsurvivor)
-7. [PowerShell Scripts Reference](#powershell-scripts-reference)
+7. [Scripts Reference](#scripts-reference)
 8. [CLI Commands Reference](#cli-commands-reference)
 9. [Configuration Reference](#configuration-reference)
 10. [Panic Button](#panic-button)
@@ -90,7 +92,7 @@ A GPU warmup loop at startup (up to 20 inferences with the real face crop) runs 
 
 | Requirement | Notes |
 |---|---|
-| Windows 10 or 11 | Windows-only in v1 |
+| Windows 10 / 11 or Linux | Windows: use `.ps1` scripts · Linux: use `.sh` scripts |
 | Python 3.10+ | [python.org](https://www.python.org/downloads/) — must be in PATH |
 | Git | [git-scm.com](https://git-scm.com/) |
 | OBS Studio | [obsproject.com](https://obsproject.com/) — open once after install to register the virtual camera driver |
@@ -132,7 +134,13 @@ cd ScrumSurvivor
 ### Step 2 — Run the full prerequisites wizard
 
 ```powershell
+# Windows
 .\run_setup.ps1
+```
+
+```bash
+# Linux
+./run_setup.sh
 ```
 
 This automated 7-step wizard:
@@ -170,7 +178,13 @@ wav2lip_use_gan: true
 ### Step 4 — Create your assets
 
 ```powershell
+# Windows
 .\run_create_assets.ps1
+```
+
+```bash
+# Linux
+./run_create_assets.sh
 ```
 
 See [Assets You Must Provide](#assets-you-must-provide) for the full requirements.
@@ -178,7 +192,13 @@ See [Assets You Must Provide](#assets-you-must-provide) for the full requirement
 ### Step 5 — Run the configuration wizard
 
 ```powershell
+# Windows
 .\run_config.ps1
+```
+
+```bash
+# Linux
+./run_config.sh
 ```
 
 This selects your microphone, virtual audio device, and lets you tune the speech detection threshold with a live audio level meter.
@@ -186,7 +206,13 @@ This selects your microphone, virtual audio device, and lets you tune the speech
 ### Step 6 — Run
 
 ```powershell
+# Windows
 .\run.ps1
+```
+
+```bash
+# Linux
+./run.sh
 ```
 
 ---
@@ -222,7 +248,7 @@ Step out of frame, capture your desk from the **exact same camera angle**, save 
 
 ### Idle video clips (`assets/idle_clips/*.mp4`)
 
-Short (5–10 second) MP4 clips of subtle movements. The interactive wizard (`.\run_create_assets.ps1`) guides you through capture with a live preview window.
+Short (5–10 second) MP4 clips of subtle movements. The interactive wizard (`.\run_create_assets.ps1` / `./run_create_assets.sh`) guides you through capture with a live preview window.
 
 | Property | Requirement |
 |---|---|
@@ -240,11 +266,13 @@ Suggested movements: weight shift in chair, brief glance aside, lean forward/bac
 ## Full Setup: Step by Step
 
 ```
- [1]  .\run_setup.ps1          Install all prerequisites + Python environment
- [2]  Place model weights       models/Wav2Lip-SD-NOGAN.pt
- [3]  .\run_create_assets.ps1   Interactive capture: base photo + idle clips
- [4]  .\run_config.ps1          Select mic / virtual audio / tune speech threshold
- [5]  .\run.ps1                 Start the pipeline
+Windows                          Linux
+────────────────────────────────────────────────────────────────
+ [1]  .\run_setup.ps1            ./run_setup.sh                   Install all prerequisites + Python environment
+ [2]  Place model weights        models/Wav2Lip-SD-NOGAN.pt       models/Wav2Lip-SD-NOGAN.pt
+ [3]  .\run_create_assets.ps1    ./run_create_assets.sh           Interactive capture: base photo + idle clips
+ [4]  .\run_config.ps1           ./run_config.sh                  Select mic / virtual audio / tune speech threshold
+ [5]  .\run.ps1                  ./run.sh                         Start the pipeline
 ```
 
 ---
@@ -252,29 +280,40 @@ Suggested movements: weight shift in chair, brief glance aside, lean forward/bac
 ## Running ScrumSurvivor
 
 ```powershell
-# Normal run
+# Windows — Normal run
 .\run.ps1
 
-# With local preview window (shows what the virtual camera outputs)
+# Windows — With local preview window (shows what the virtual camera outputs)
 .\run.ps1 -Preview
 
-# Without preview window
+# Windows — Without preview window
 .\run.ps1 -NoPreview
+```
+
+```bash
+# Linux — Normal run
+./run.sh
+
+# Linux — With local preview window
+./run.sh --preview
+
+# Linux — Without preview window
+./run.sh --no-preview
 ```
 
 Press `Ctrl+C` in the terminal to stop.
 
 ---
 
-## PowerShell Scripts Reference
+## Scripts Reference
 
 | Script | Purpose |
 |---|---|
-| `.\run_setup.ps1` | **One-time** full prerequisites wizard (venv, CUDA torch, drivers, model check) |
-| `.\run_create_assets.ps1` | Interactive asset capture wizard (base photo + idle clips) |
-| `.\run_config.ps1` | Configuration wizard (microphone, virtual audio, speech threshold) |
-| `.\run.ps1` | Start the main pipeline |
-| `.\run_verifier.ps1` | Start the Illusion Verifier (A/V sync review tool) |
+| `.\run_setup.ps1` / `./run_setup.sh` | **One-time** full prerequisites wizard (venv, CUDA torch, drivers, model check) |
+| `.\run_create_assets.ps1` / `./run_create_assets.sh` | Interactive asset capture wizard (base photo + idle clips) |
+| `.\run_config.ps1` / `./run_config.sh` | Configuration wizard (microphone, virtual audio, speech threshold) |
+| `.\run.ps1` / `./run.sh` | Start the main pipeline |
+| `.\run_verifier.ps1` / `./run_verifier.sh` | Start the Illusion Verifier (A/V sync review tool) |
 
 All scripts automatically activate the `.venv`.
 
@@ -302,7 +341,7 @@ All commands accept `--config path/to/config.yaml` to use an alternative config 
 
 ## Configuration Reference
 
-`config.yaml` is written by `.\run_config.ps1`. All settings require a restart to take effect.
+`config.yaml` is written by `.\run_config.ps1` / `./run_config.sh`. All settings require a restart to take effect.
 
 ```yaml
 # ── Asset paths ─────────────────────────────────────────────────────────────
@@ -312,7 +351,7 @@ wav2lip_model_path: models/Wav2Lip-SD-NOGAN.pt
 wav2lip_use_gan: false              # true = GAN variant (higher quality, more VRAM)
 
 # ── Speech detection ─────────────────────────────────────────────────────────
-speech_threshold: 0.111             # RMS energy threshold — set by run_config.ps1
+speech_threshold: 0.111             # RMS energy threshold — set by run_config.ps1 / run_config.sh
 speech_attack_ms: 80                # ms of continuous speech before entering SPEAKING state
 speech_release_ms: 300              # ms of silence before returning to IDLE state
 
@@ -361,7 +400,13 @@ The hotkey is configurable via `panic_hotkey` in `config.yaml`.
 A separate companion tool for reviewing the audio/video sync of the pipeline output. It records what the virtual camera and VB-Cable are actually sending and saves a file you can review frame by frame.
 
 ```powershell
+# Windows
 .\run_verifier.ps1
+```
+
+```bash
+# Linux
+./run_verifier.sh
 ```
 
 Say something or clap while it is running, then press `Ctrl+Shift+F10` (default) to stop. Review the saved recording to check that lip motion and audio are aligned.
@@ -383,7 +428,7 @@ Say something or clap while it is running, then press `Ctrl+Shift+F10` (default)
 
 ### Avatar lipsync does not trigger (mouth never moves)
 
-1. Check the log for `State: IDLE → SPEAKING`. If it never appears, the speech threshold is too high. Run `.\run_config.ps1` to re-tune.
+1. Check the log for `State: IDLE → SPEAKING`. If it never appears, the speech threshold is too high. Run `.\run_config.ps1` / `./run_config.sh` to re-tune.
 2. Check the `queued=X s` value in the log — should be ~0.28 s in normal operation. A permanently growing value indicates a scheduling problem.
 3. Confirm PyTorch CUDA is installed: `.\.venv\Scripts\python.exe -c "import torch; print(torch.cuda.is_available())"` must print `True`.
 
@@ -415,7 +460,13 @@ The package is not installed in the venv:
 Re-run the configuration wizard:
 
 ```powershell
+# Windows
 .\run_config.ps1
+```
+
+```bash
+# Linux
+./run_config.sh
 ```
 
 Or manually adjust `audio_delay_ms` in `config.yaml`. Higher value = audio plays later relative to video.
@@ -431,9 +482,16 @@ MediaPipe could not find a face in `base_photo.png`. Requirements:
 ## Running Tests
 
 ```powershell
-# Activate venv first
+# Activate venv first (Windows)
 .\.venv\Scripts\Activate.ps1
+```
 
+```bash
+# Activate venv first (Linux)
+source .venv/bin/activate
+```
+
+```bash
 # All non-hardware tests (no physical devices needed — should always pass)
 python -m pytest tests/ -v -m "not hardware and not gpu"
 
@@ -452,7 +510,7 @@ python -m pytest tests/ -v -m gpu
 ScrumSurvivor/
 ├── assets/                         ← YOU PROVIDE (base_photo, background, idle clips)
 ├── models/                         ← YOU DOWNLOAD (Wav2Lip weights)
-├── ffmpeg/                         ← ffmpeg.exe binary (placed by run_setup.ps1)
+├── ffmpeg/                         ← ffmpeg binary (placed by run_setup.ps1 / run_setup.sh)
 ├── src/
 │   ├── scrumsurvivor/
 │   │   ├── config/                 ← AppConfig dataclass, YAML load/save
@@ -470,14 +528,21 @@ ScrumSurvivor/
 │   │   └── create_assets.py        ← Interactive asset capture wizard
 │   └── illusion_verifier/          ← A/V sync review tool
 ├── tests/                          ← pytest test suite
-├── config.yaml                     ← Written by run_config.ps1
+├── config.yaml                     ← Written by run_config.ps1 / run_config.sh
 ├── pyproject.toml
 ├── requirements.txt
-├── run.ps1                         ← Start the pipeline
-├── run_setup.ps1                   ← One-time prerequisites wizard
-├── run_create_assets.ps1           ← Interactive asset capture
-├── run_config.ps1                  ← Configuration + speech threshold wizard
-└── run_verifier.ps1                ← Illusion Verifier (A/V sync review tool)
+├── run.ps1                         ← Start the pipeline (Windows)
+├── run.sh                          ← Start the pipeline (Linux)
+├── run_setup.ps1                   ← One-time prerequisites wizard (Windows)
+├── run_setup.sh                    ← One-time prerequisites wizard (Linux)
+├── run_create_assets.ps1           ← Interactive asset capture (Windows)
+├── run_create_assets.sh            ← Interactive asset capture (Linux)
+├── run_config.ps1                  ← Configuration + speech threshold wizard (Windows)
+├── run_config.sh                   ← Configuration + speech threshold wizard (Linux)
+├── run_verifier.ps1                ← Illusion Verifier (A/V sync review tool, Windows)
+├── run_verifier.sh                 ← Illusion Verifier (A/V sync review tool, Linux)
+├── setup_venv.ps1                  ← Create Python virtual environment (Windows)
+└── setup_venv.sh                   ← Create Python virtual environment (Linux)
 ```
 
 ---
