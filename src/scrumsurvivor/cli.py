@@ -223,9 +223,12 @@ def run(config: str, preview: bool | None, theme: str | None, prompt_theme: bool
         lipsync_engine = Wav2LipEngine(
             model_path=cfg.wav2lip_model_path,
             device="cuda",
-            use_gan=cfg.wav2lip_use_gan,
         )
-        face_crop_mgr = FaceCropManager(base_photo=base_photo)
+        face_crop_mgr = FaceCropManager(
+            base_photo=base_photo,
+            preset_rect=cfg.face_crop_rect,
+            mouth_rect=cfg.mouth_crop_rect,
+        )
         logger.info("Detecting face in base photo…")
         rect = face_crop_mgr.detect()
         if rect is None:
@@ -385,7 +388,6 @@ def calibrate(config: str, iterations: int, verify_sync: bool) -> None:
     engine = Wav2LipEngine(
         model_path=cfg.wav2lip_model_path,
         device="cuda",
-        use_gan=cfg.wav2lip_use_gan,
     )
 
     face = np.zeros((96, 96, 3), dtype=np.uint8)

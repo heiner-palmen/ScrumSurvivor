@@ -19,18 +19,15 @@ class Wav2LipEngine:
     Args:
         model_path: Path to the ``.pth`` weights file.
         device: PyTorch device string (``"cuda"`` or ``"cpu"``).
-        use_gan: If True, treat the weights as the GAN variant.
     """
 
     def __init__(
         self,
         model_path: str,
         device: str = "cuda",
-        use_gan: bool = False,
     ) -> None:
         self._model_path = model_path
         self._device_str = device
-        self._use_gan = use_gan
         self._model = None
         self._device = None
         self._ready = False
@@ -77,7 +74,7 @@ class Wav2LipEngine:
             model.eval()
 
         self._model = model
-        logger.info("Wav2Lip model loaded on %s (GAN=%s).", self._device, self._use_gan)
+        logger.info("Wav2Lip model loaded on %s.", self._device)
         self.warm_up()
 
     # ── Public API ────────────────────────────────────────────────────────────

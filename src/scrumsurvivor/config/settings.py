@@ -17,7 +17,7 @@ class AppConfig:
     # Asset paths
     base_photo_path: str = "assets/base_photo.png"
     idle_clips_dir: str = "assets/idle_clips/"
-    wav2lip_model_path: str = "models/wav2lip.pth"
+    wav2lip_model_path: str = "models/Wav2Lip-SD-NOGAN.pt"
 
     # Microphone (None = system default; use integer index or partial name string)
     microphone_device: int | str | None = None
@@ -61,7 +61,8 @@ class AppConfig:
     active_theme: str | None = None  # None = use base_photo_path/idle_clips_dir directly
 
     # Lipsync
-    wav2lip_use_gan: bool = False
+    face_crop_rect: list[int] | None = None   # [x, y, w, h] — overrides Haar face auto-detection
+    mouth_crop_rect: list[int] | None = None  # [x, y, w, h] absolute px — overrides ratio-based mouth placement
 
     # Panic button — instantly switches to real webcam + zero-delay audio
     panic_hotkey: str = "ctrl+shift+p"
@@ -112,12 +113,17 @@ def load_config(config_path: str = DEFAULT_CONFIG_PATH) -> AppConfig:
     return config
 
 
+# Fields that are resolved at runtime and must not be persisted to config.yaml.
+_TRANSIENT_FIELDS = {"active_theme"}
+
+
 def save_config(config: AppConfig, config_path: str = DEFAULT_CONFIG_PATH) -> None:
     """Serialise *config* to YAML at *config_path*."""
     path = Path(config_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    data = {k: v for k, v in asdict(config).items() if k not in _TRANSIENT_FIELDS}
     with path.open("w", encoding="utf-8") as f:
-        yaml.dump(asdict(config), f, default_flow_style=False, allow_unicode=True)
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
 
 
 def generate_default_config(config_path: str = DEFAULT_CONFIG_PATH) -> None:
@@ -170,10 +176,6 @@ idle_after_speaking_cooldown_s: 5.0  # Minimum static base-image hold after spee
 # ── Audio Output ─────────────────────────────────────────────────────────
 output_gain: 0.6            # Scale output audio (0.0-1.0) — reduces noise impact on lip-sync
 presentation_release_ms: 1500  # ms of silence before switching SPEAKING→IDLE (bridges natural word gaps)
-# ── Themes ───────────────────────────────────────────────────────────────
-active_theme: null           # null = use default assets/; set to a theme name e.g. 'casual'
-# ── Lipsync ──────────────────────────────────────────────────────────────────
-wav2lip_use_gan: false      # Set to true to use GAN variant (higher quality, slower)
 """
     path.write_text(content, encoding="utf-8")
     logger.info("Generated default config at %s", config_path)
