@@ -4,6 +4,8 @@
 
 > **Survive mandatory camera-on meetings with a photorealistic AI avatar.**
 
+![ScrumSurvivor demo](assets/demo.gif)
+
 ![ScrumSurvivor](assets/scrumsurvivor.png)
 
 ScrumSurvivor replaces your live webcam feed with an AI-animated version of *you*. When you speak, [Wav2Lip](https://github.com/Rudrabha/Wav2Lip) lip-syncs your face to your voice in real time. When you are silent, the avatar breathes, blinks, sways its head, and plays pre-recorded idle clips — all layered procedurally so it looks alive. Your colleagues see you attentively present. You see freedom.
