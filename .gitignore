@@ -33,7 +33,7 @@ dist/
 build/
 
 # Config with personal settings (user regenerates on first run)
-# config.yaml is intentionally included — it serves as a documented template
+config.yaml
 
 # OS
 .DS_Store

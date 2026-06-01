@@ -172,7 +172,6 @@ If using the GAN variant, update `config.yaml`:
 
 ```yaml
 wav2lip_model_path: models/Wav2Lip-SD-GAN.pt
-wav2lip_use_gan: true
 ```
 
 ### Step 4 — Create your assets
@@ -348,7 +347,12 @@ All commands accept `--config path/to/config.yaml` to use an alternative config 
 base_photo_path: assets/base_photo.png
 idle_clips_dir: assets/idle_clips/
 wav2lip_model_path: models/Wav2Lip-SD-NOGAN.pt
-wav2lip_use_gan: false              # true = GAN variant (higher quality, more VRAM)
+
+# ── Lipsync crop overrides (optional) ───────────────────────────────────────
+# If omitted, face crop is auto-detected and mouth placement uses fixed ratios.
+# If provided, these pixel rects are used directly.
+face_crop_rect: [525, 121, 231, 311]   # [x, y, w, h]
+mouth_crop_rect: [596, 349, 87, 42]    # [x, y, w, h]
 
 # ── Speech detection ─────────────────────────────────────────────────────────
 speech_threshold: 0.111             # RMS energy threshold — set by run_config.ps1 / run_config.sh
@@ -384,6 +388,24 @@ preview_enabled: false
 log_file: logs/scrumsurvivor.log
 log_level: INFO                     # DEBUG, INFO, WARNING, ERROR
 ```
+
+### Manual lipsync crop overrides
+
+You can lock the lipsync region with fixed pixel rectangles:
+
+- `face_crop_rect`: Overrides face auto-detection and defines the face crop sent to Wav2Lip.
+- `mouth_crop_rect`: Overrides ratio-based mouth placement and defines where mouth blending is applied.
+
+Use these when auto-detection drifts or when your avatar framing is static and you want deterministic placement.
+
+Example:
+
+```yaml
+face_crop_rect: [525, 121, 231, 311]
+mouth_crop_rect: [596, 349, 87, 42]
+```
+
+Both values are absolute pixel coordinates in the final output frame (`output_resolution`).
 
 ---
 

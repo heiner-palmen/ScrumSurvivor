@@ -66,7 +66,6 @@ def _make_engine_with_mock(torch_mock):
     engine._device = "cpu"
     engine._device_str = "cpu"
     engine._ready = True
-    engine._use_gan = False
     return engine
 
 
